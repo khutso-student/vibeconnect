@@ -20,21 +20,22 @@ const app = express();
 
 // ✅ CORS setup
 const allowedOrigins = [
-  "http://localhost:5173",       // local frontend
-  process.env.CLIENT_URL,        // production frontend
+  "http://localhost:5173",          // local dev
+  process.env.CLIENT_URL || "",     // production frontend
 ].filter(Boolean);
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // Postman, server-to-server
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Postman or server-to-server
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`❌ CORS blocked: ${origin}`));
+    callback(new Error(`❌ CORS blocked: ${origin}`));
   },
   credentials: true, // allow cookies
 };
 
-app.use(cors(corsOptions)); // handle CORS for all routes
-app.use(express.json());    // parse JSON
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // preflight
+
 
 // ✅ Session setup
 app.use(

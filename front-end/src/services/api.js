@@ -19,5 +19,12 @@ api.interceptors.request.use((config) => {
 export default api;
 
 // Signup / Login
-export const signup = (data) => api.post("/users/signup", data);
-export const login = (data) => api.post("/users/login", data);
+export const signup = async (data) => {
+  const res = await api.post("/users/signup", data);
+  return res.data;
+};
+
+export const login = async (data) => {
+  const res = await api.post("/users/login", data);
+  return res.data;
+};
