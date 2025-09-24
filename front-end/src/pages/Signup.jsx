@@ -6,6 +6,7 @@ import Logo from "../assets/Logo.svg";
 import { CiUser } from "react-icons/ci";
 import { MdOutlineEmail } from "react-icons/md";
 import { CiLock } from "react-icons/ci";
+import { FcGoogle } from "react-icons/fc";
 import { useNavigate, Link } from "react-router-dom";
 
 export default function Signup() {
@@ -35,9 +36,17 @@ export default function Signup() {
     }
   };
 
+// Rename function to match button call
+const handleGoogleSignup = () => {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  window.location.href = `${API_BASE_URL}/api/users/google`;
+};
+
+
+
   return (
     <div className="flex justify-center items-center w-full h-screen bg-[#F6F6F6] px-4">
-      <div className="flex flex-col justify-center py-4 px-5 bg-white w-80 h-100 border border-[#cecece] rounded-md">
+      <div className="flex flex-col justify-center py-4 px-5 bg-white w-80 h-auto border border-[#cecece] rounded-md">
         <img src={Logo} alt="Web Logo" className="w-40 mb-2" />
         <p className="text-[#344576] text-xl font-semibold mb-2">Sign up</p>
         <p className="text-sm text-[#A4A2A2] mb-4">
@@ -46,11 +55,7 @@ export default function Signup() {
 
         {error && <p className="text-red-500 text-sm text-center mb-2">{error}</p>}
 
-        {/* ✅ Fixed: Added onSubmit */}
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col w-full text-[#4d4d4d]"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col w-full text-[#4d4d4d]">
           <div className="flex items-center bg-[#f3f3f3] w-full py-1 px-4 border border-[#D7D7D7] rounded-md mb-2">
             <CiUser />
             <input
@@ -131,6 +136,15 @@ export default function Signup() {
             Login
           </Link>
         </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignup}
+          className="flex flex-col justify-center items-center  w-12 h-12 rounded-full border-2 border-gray-200 bg-white hover:border-[#F46BF9] text-sm  cursor-pointer gap-2 mt-3"
+          disabled={loading}
+        >
+          <FcGoogle size={20} /> 
+        </button>
       </div>
     </div>
   );

@@ -1,18 +1,24 @@
 import React, { useState, useContext } from "react";
-import { login as loginApi } from "../services/api"; // ✅ renamed to avoid conflict
+import { login as loginApi } from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 import Logo from "../assets/Logo.svg";
 
 import { MdOutlineEmail } from "react-icons/md";
 import { CiLock } from "react-icons/ci";
+import { FcGoogle } from "react-icons/fc";
+
 import { useNavigate, Link } from "react-router-dom";
 
 export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useContext(AuthContext); 
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: "", password: "" });
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -24,8 +30,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await loginApi(formData); 
-      login(res.user, res.token); 
+      const res = await loginApi(formData);
+      login(res.user, res.token); // Save user and token to context/localStorage
       navigate("/home");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
@@ -33,6 +39,13 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+const handleGoogleLogin = () => {
+  // ✅ use your backend base URL from .env (or fallback to localhost)
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  window.location.href = `${API_BASE_URL}/api/users/google`;
+};
+
 
   return (
     <div className="flex justify-center items-center w-full h-screen bg-[#F6F6F6] px-4">
@@ -45,7 +58,7 @@ export default function Login() {
 
         {error && <p className="text-red-500 text-sm text-center mb-2">{error}</p>}
 
-        {/* ✅ Fixed: Added onSubmit */}
+        {/* ✅ Login Form */}
         <form onSubmit={handleSubmit} className="flex flex-col w-full text-[#4d4d4d]">
           <div className="flex items-center bg-[#f3f3f3] w-full py-1 px-4 border border-[#D7D7D7] rounded-md mb-2">
             <MdOutlineEmail />
@@ -108,12 +121,22 @@ export default function Login() {
         <div className="flex justify-center items-center mt-2">
           <p className="text-[#A4A2A2] text-sm">Don't have an account?</p>
           <Link
-            to="/" // 
+            to="/"
             className="text-[#F46BF9] hover:text-[#344576] text-sm hover:underline font-semibold ml-2 duration-300"
           >
             Sign up
           </Link>
         </div>
+
+        {/* ✅ Google Login Button */}
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="flex flex-col justify-center items-center  w-12 h-12 rounded-full border-2 border-gray-200 bg-white hover:border-[#F46BF9] text-sm  cursor-pointer gap-2 mt-3"
+          disabled={loading}
+        >
+          <FcGoogle size={20} /> 
+        </button>
       </div>
     </div>
   );

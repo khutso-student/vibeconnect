@@ -201,14 +201,14 @@ export default function EventSide() {
             setModal(false);
             setEditingEvent(null);
           }}
-          className="fixed top-0 left-0 w-full h-full bg-[#00000060] flex justify-center items-center"
+          className="fixed top-0 left-0 w-full h-full bg-[#00000060] flex justify-center items-center p-2"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-100 max-w-md rounded-md bg-white p-4"
+            className="w-full sm:100 max-w-md rounded-md bg-white p-4"
           >
             <div className="flex justify-between items-center w-full mb-4">
-              <p className="font-bold text-lg">
+              <p className="font-bold text-lg text-[#2c2c2c]">
                 {editingEvent ? "Edit Event" : "Add Event"}
               </p>
               <button
