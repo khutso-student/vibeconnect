@@ -38,9 +38,6 @@ importers:
       multer:
         specifier: ^2.0.2
         version: 2.0.2
-      nodemon:
-        specifier: ^3.1.10
-        version: 3.1.10
       passport:
         specifier: ^0.7.0
         version: 0.7.0
@@ -51,6 +48,9 @@ importers:
       cross-env:
         specifier: ^10.0.0
         version: 10.0.0
+      nodemon:
+        specifier: ^3.1.10
+        version: 3.1.10
 
 packages:
 

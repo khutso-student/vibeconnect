@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 function EventCarousel({ events = [] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Base URL from environment variable (works in local and production)
+  const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
   useEffect(() => {
     if (events.length === 0) return;
 
@@ -13,18 +16,28 @@ function EventCarousel({ events = [] }) {
     return () => clearInterval(interval);
   }, [events]);
 
-  if (events.length === 0) return <p className="text-gray-300">No event images available</p>;
+  if (events.length === 0) 
+    return <p className="text-gray-300">No event images available</p>;
 
   const event = events[currentIndex];
 
+  // Handle relative vs absolute image URLs
+  const imageUrl = event.image
+    ? event.image.startsWith("http")
+      ? event.image
+      : `${BASE_URL}${event.image}`
+    : "";
+
   return (
     <div className="relative w-full h-48 bg-gray-100 rounded-md overflow-hidden">
-      <img
-        src={event.image.startsWith("http") ? event.image : `http://localhost:5000${event.image}`}
-        alt={event.title}
-        className="w-full h-full object-cover transition-transform duration-700"
-      />
-      <div className="absolute  bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={event.title}
+          className="w-full h-full object-cover transition-transform duration-700"
+        />
+      )}
+      <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
         {event.title}
       </div>
     </div>
