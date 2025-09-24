@@ -1,4 +1,3 @@
-// server.js
 const dotenvFlow = require("dotenv-flow");
 dotenvFlow.config({ node_env: process.env.NODE_ENV || "development" });
 
@@ -11,49 +10,46 @@ const userRoutes = require("./routes/userRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const upload = require("./routes/upload");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("./models/User");
-const jwt = require("jsonwebtoken");
+const User = require("./models/User"); // ✅ Make sure you have a User model
 
 connectDB();
 
-const app = express();
-
-// ✅ CORS Setup for local + production
 const allowedOrigins = [
-  "http://localhost:5173",                  // local frontend
-  process.env.CLIENT_URL,                   // production frontend
+  process.env.CLIENT_URL,
+  "http://localhost:5173",
 ].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // allow non-browser requests
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`❌ CORS blocked: ${origin}`));
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `❌ CORS blocked: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
   },
   credentials: true,
 };
 
+const app = express();
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // handle preflight requests
 app.use(express.json());
 
-// ✅ Session setup
+/* ✅ Setup session for Passport */
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "keyboard cat",
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production", // use HTTPS in prod
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    },
+    cookie: { secure: false }, // set true if using https
   })
 );
 
-// ✅ Passport setup
+/* ✅ Passport Middleware */
 app.use(passport.initialize());
 app.use(passport.session());
 
+/* ✅ Passport Google OAuth Strategy */
 passport.use(
   new GoogleStrategy(
     {
@@ -70,18 +66,21 @@ passport.use(
             name: profile.displayName,
             email: profile.emails[0].value,
             avatar: profile.photos[0].value,
-            role: "user",
+            role: "user", // default role
           });
         }
-        done(null, user);
+        return done(null, user);
       } catch (err) {
-        done(err, null);
+        return done(err, null);
       }
     }
   )
 );
 
-passport.serializeUser((user, done) => done(null, user.id));
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
@@ -100,14 +99,19 @@ app.use("/api/events", eventRoutes);
 app.use("/api/uploads", upload);
 
 // ✅ Google OAuth Routes
-app.get("/api/users/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+app.get(
+  "/api/users/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
 
 app.get(
   "/api/users/google/callback",
   passport.authenticate("google", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    if (!req.user) return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
+    if (!req.user)
+      return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
 
+    const jwt = require("jsonwebtoken");
     const token = jwt.sign(
       {
         id: req.user._id,
@@ -139,7 +143,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Something went wrong", error: err.message });
 });
 
-// ✅ Start server
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT} (${process.env.NODE_ENV})`)
