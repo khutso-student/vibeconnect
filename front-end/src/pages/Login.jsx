@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import { login as loginApi } from "../services/api";
+import { login as loginApi } from "../services/api"; // updated api.js
 import { AuthContext } from "../context/AuthContext";
 import Logo from "../assets/Logo.svg";
 
@@ -15,10 +15,7 @@ export default function Login() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -30,8 +27,9 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // ✅ login now matches the backend route correctly
       const res = await loginApi(formData);
-      login(res.user, res.token); // Save user and token to context/localStorage
+      login(res.user, res.token);
       navigate("/home");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
@@ -40,12 +38,11 @@ export default function Login() {
     }
   };
 
-const handleGoogleLogin = () => {
-  // ✅ use your backend base URL from .env (or fallback to localhost)
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-  window.location.href = `${API_BASE_URL}/api/users/google`;
-};
-
+  const handleGoogleLogin = () => {
+    // ✅ Use backend URL from .env (works local + prod)
+    const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    window.location.href = `${API_BASE_URL}/api/users/google`;
+  };
 
   return (
     <div className="flex justify-center items-center w-full h-screen bg-[#F6F6F6] px-4">
@@ -58,7 +55,6 @@ const handleGoogleLogin = () => {
 
         {error && <p className="text-red-500 text-sm text-center mb-2">{error}</p>}
 
-        {/* ✅ Login Form */}
         <form onSubmit={handleSubmit} className="flex flex-col w-full text-[#4d4d4d]">
           <div className="flex items-center bg-[#f3f3f3] w-full py-1 px-4 border border-[#D7D7D7] rounded-md mb-2">
             <MdOutlineEmail />
@@ -128,14 +124,13 @@ const handleGoogleLogin = () => {
           </Link>
         </div>
 
-        {/* ✅ Google Login Button */}
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="flex flex-col justify-center items-center  w-12 h-12 rounded-full border-2 border-gray-200 bg-white hover:border-[#F46BF9] text-sm  cursor-pointer gap-2 mt-3"
+          className="flex flex-col justify-center items-center w-12 h-12 rounded-full border-2 border-gray-200 bg-white hover:border-[#F46BF9] text-sm cursor-pointer gap-2 mt-3"
           disabled={loading}
         >
-          <FcGoogle size={20} /> 
+          <FcGoogle size={20} />
         </button>
       </div>
     </div>

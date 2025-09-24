@@ -1,3 +1,4 @@
+// server.js
 const dotenvFlow = require("dotenv-flow");
 dotenvFlow.config({ node_env: process.env.NODE_ENV || "development" });
 
@@ -10,46 +11,49 @@ const userRoutes = require("./routes/userRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const upload = require("./routes/upload");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("./models/User"); // ✅ Make sure you have a User model
+const User = require("./models/User");
+const jwt = require("jsonwebtoken");
 
 connectDB();
 
+const app = express();
+
+// ✅ CORS setup
 const allowedOrigins = [
-  process.env.CLIENT_URL,
-  "http://localhost:5173",
+  "http://localhost:5173",       // local frontend
+  process.env.CLIENT_URL,        // production frontend
 ].filter(Boolean);
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `❌ CORS blocked: ${origin}`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // Postman, server-to-server
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`❌ CORS blocked: ${origin}`));
   },
-  credentials: true,
+  credentials: true, // allow cookies
 };
 
-const app = express();
-app.use(cors(corsOptions));
-app.use(express.json());
+app.use(cors(corsOptions)); // handle CORS for all routes
+app.use(express.json());    // parse JSON
 
-/* ✅ Setup session for Passport */
+// ✅ Session setup
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "keyboard cat",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }, // set true if using https
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // HTTPS only
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    },
   })
 );
 
-/* ✅ Passport Middleware */
+// ✅ Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
 
-/* ✅ Passport Google OAuth Strategy */
+// ✅ Google OAuth
 passport.use(
   new GoogleStrategy(
     {
@@ -66,21 +70,18 @@ passport.use(
             name: profile.displayName,
             email: profile.emails[0].value,
             avatar: profile.photos[0].value,
-            role: "user", // default role
+            role: "user",
           });
         }
-        return done(null, user);
+        done(null, user);
       } catch (err) {
-        return done(err, null);
+        done(err, null);
       }
     }
   )
 );
 
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
-
+passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
@@ -93,25 +94,20 @@ passport.deserializeUser(async (id, done) => {
 // ✅ Serve uploaded images
 app.use("/uploads", express.static("uploads"));
 
-// ✅ Routes
+// ✅ API routes
 app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/uploads", upload);
 
 // ✅ Google OAuth Routes
-app.get(
-  "/api/users/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+app.get("/api/users/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 app.get(
   "/api/users/google/callback",
   passport.authenticate("google", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    if (!req.user)
-      return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
+    if (!req.user) return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
 
-    const jwt = require("jsonwebtoken");
     const token = jwt.sign(
       {
         id: req.user._id,
@@ -137,13 +133,13 @@ app.get("/health", (req, res) => {
   });
 });
 
-// ✅ Error handler
+// ✅ Global error handler
 app.use((err, req, res, next) => {
   console.error("❌ Server Error:", err.stack);
   res.status(500).json({ message: "Something went wrong", error: err.message });
 });
 
-// Start server
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT} (${process.env.NODE_ENV})`)

@@ -26,6 +26,7 @@ export default function Signup() {
     setLoading(true);
 
     try {
+      // ✅ signup now matches the backend route without double /api
       const res = await signup(formData);
       login(res.user, res.token);
       navigate("/home");
@@ -36,13 +37,11 @@ export default function Signup() {
     }
   };
 
-// Rename function to match button call
-const handleGoogleSignup = () => {
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-  window.location.href = `${API_BASE_URL}/api/users/google`;
-};
-
-
+  const handleGoogleSignup = () => {
+    // ✅ Use base URL from .env (works local + prod)
+    const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    window.location.href = `${API_BASE_URL}/api/users/google`;
+  };
 
   return (
     <div className="flex justify-center items-center w-full h-screen bg-[#F6F6F6] px-4">
