@@ -1,5 +1,6 @@
 import axios from "axios";
 
+// Pick base URL from Vite env variable
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 // Create an Axios instance
@@ -8,6 +9,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Add Authorization header automatically if token exists
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -16,6 +18,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Export Axios instance for custom requests if needed
 export default api;
 
 export const signup = async (data) => {
