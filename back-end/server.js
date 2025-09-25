@@ -1,4 +1,3 @@
-// server.js
 const dotenvFlow = require("dotenv-flow");
 dotenvFlow.config({ node_env: process.env.NODE_ENV || "development" });
 
@@ -18,23 +17,30 @@ connectDB();
 
 const app = express();
 
-// ✅ CORS setup
+// ✅ CORS setup (works for local + production)
 const allowedOrigins = [
-  "http://localhost:5173", // local frontend
-  process.env.CLIENT_URL || "", // production frontend
+  "http://localhost:5173",
+  process.env.CLIENT_URL, // production URL (Vercel frontend)
 ].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // allow Postman/server-to-server
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`❌ CORS blocked: ${origin}`));
+    console.log("🌍 CORS Request from:", origin);
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn("❌ CORS Blocked:", origin);
+    return callback(new Error("CORS not allowed"), false);
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
+// ✅ Apply CORS globally
 app.use(cors(corsOptions));
-// ✅ FIX: Express 5 no longer supports "*" — must use regex for preflight
+
+// ✅ FIX for Express 5: use regex for preflight, not "*"
 app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
@@ -56,6 +62,7 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ✅ Google OAuth setup
 passport.use(
   new GoogleStrategy(
     {
@@ -101,16 +108,14 @@ app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/uploads", upload);
 
-// ✅ Google OAuth Routes
+// ✅ Google OAuth routes
 app.get("/api/users/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 app.get(
   "/api/users/google/callback",
   passport.authenticate("google", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    if (!req.user) {
-      return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
-    }
+    if (!req.user) return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
 
     const token = jwt.sign(
       {
@@ -127,7 +132,7 @@ app.get(
   }
 );
 
-// ✅ Health check
+// ✅ Health check route
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -137,13 +142,17 @@ app.get("/health", (req, res) => {
   });
 });
 
+// ✅ FIX: Express 5 catch-all route must use /(.*)
+app.all(/(.*)/, (req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
+
 // ✅ Global error handler
 app.use((err, req, res, next) => {
   console.error("❌ Server Error:", err.stack);
   res.status(500).json({ message: "Something went wrong", error: err.message });
 });
 
-// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT} (${process.env.NODE_ENV})`)
