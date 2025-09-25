@@ -14,18 +14,23 @@ const User = require("./models/User");
 const jwt = require("jsonwebtoken");
 
 connectDB();
+
 const app = express();
 
+// ======================
 // ✅ Allowed origins
+// ======================
 const allowedOrigins = [
   "http://localhost:5173", // local dev
   process.env.CLIENT_URL,   // production frontend
 ].filter(Boolean);
 
-// ✅ CORS setup (works local + production)
+// ======================
+// ✅ CORS setup
+// ======================
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl)
+    // Allow requests with no origin (Postman, mobile apps, server-to-server)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) return callback(null, true);
@@ -33,17 +38,21 @@ const corsOptions = {
     console.warn("❌ CORS Blocked:", origin);
     return callback(new Error("CORS not allowed"), false);
   },
-  credentials: true, // needed if using cookie sessions
+  credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
+// Apply CORS globally
 app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions)); // preflight for all routes
+// Preflight for all routes
+app.options(/(.*)/, cors(corsOptions));
 
 app.use(express.json());
 
-// ✅ Session setup (for cookie-based auth)
+// ======================
+// ✅ Session setup
+// ======================
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "keyboard cat",
@@ -56,11 +65,15 @@ app.use(
   })
 );
 
+// ======================
 // ✅ Passport setup
+// ======================
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ✅ Google OAuth
+// ======================
+// ✅ Google OAuth setup
+// ======================
 passport.use(
   new GoogleStrategy(
     {
@@ -98,22 +111,29 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
+// ======================
 // ✅ Serve uploaded images
+// ======================
 app.use("/uploads", express.static("uploads"));
 
+// ======================
 // ✅ API routes
+// ======================
 app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/uploads", upload);
 
+// ======================
 // ✅ Google OAuth routes
+// ======================
 app.get("/api/users/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 app.get(
   "/api/users/google/callback",
   passport.authenticate("google", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    if (!req.user) return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
+    if (!req.user)
+      return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
 
     const token = jwt.sign(
       {
@@ -130,7 +150,9 @@ app.get(
   }
 );
 
+// ======================
 // ✅ Health check
+// ======================
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -140,17 +162,24 @@ app.get("/health", (req, res) => {
   });
 });
 
-// ✅ Catch-all for 404 (Express 5 compatible)
+// ======================
+// ✅ Catch-all 404 route (Express 5 compatible)
+// ======================
 app.all(/(.*)/, (req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
+// ======================
 // ✅ Global error handler
+// ======================
 app.use((err, req, res, next) => {
   console.error("❌ Server Error:", err.stack);
   res.status(500).json({ message: "Something went wrong", error: err.message });
 });
 
+// ======================
+// ✅ Start server
+// ======================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT} (${process.env.NODE_ENV})`)
