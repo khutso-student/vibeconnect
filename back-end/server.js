@@ -14,35 +14,36 @@ const User = require("./models/User");
 const jwt = require("jsonwebtoken");
 
 connectDB();
-
-
-const allowedOrigins = [
-  process.env.CLIENT_URL,      // frontend URL
-  "http://localhost:5173",          
-].filter(Boolean); 
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); 
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `❌ CORS blocked: ${origin}`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true,
-};
-
 const app = express();
 
+// ✅ Allowed origins
+const allowedOrigins = [
+  "http://localhost:5173", // local dev
+  process.env.CLIENT_URL,   // production frontend
+].filter(Boolean);
+
+// ✅ CORS setup (works local + production)
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    console.warn("❌ CORS Blocked:", origin);
+    return callback(new Error("CORS not allowed"), false);
+  },
+  credentials: true, // needed if using cookie sessions
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
 app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions)); // preflight for all routes
 
 app.use(express.json());
 
-
-
-
-// ✅ Session setup
+// ✅ Session setup (for cookie-based auth)
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "keyboard cat",
@@ -59,7 +60,7 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ✅ Google OAuth setup
+// ✅ Google OAuth
 passport.use(
   new GoogleStrategy(
     {
@@ -129,7 +130,7 @@ app.get(
   }
 );
 
-// ✅ Health check route
+// ✅ Health check
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -139,7 +140,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// ✅ Catch-all 404 handler
+// ✅ Catch-all for 404 (Express 5 compatible)
 app.all(/(.*)/, (req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
