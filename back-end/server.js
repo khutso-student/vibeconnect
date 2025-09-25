@@ -15,30 +15,39 @@ const jwt = require("jsonwebtoken");
 
 connectDB();
 
+const app = express();
+
 // ======================
 // ✅ Allowed origins
 // ======================
-
 const allowedOrigins = [
-  process.env.CLIENT_URL,      // frontend URL
-  "http://localhost:5173",          
-].filter(Boolean); 
+  "http://localhost:5173", // local dev
+  process.env.CLIENT_URL,   // production frontend
+].filter(Boolean);
 
+// ======================
+// ✅ CORS setup
+// ======================
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); 
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `❌ CORS blocked: ${origin}`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
+    // Allow requests with no origin (Postman, mobile apps, server-to-server)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    console.warn("❌ CORS Blocked:", origin);
+    return callback(new Error("CORS not allowed"), false);
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-const app = express();
-
+// Apply CORS globally
 app.use(cors(corsOptions));
+// Preflight for all routes
+app.options(/(.*)/, cors(corsOptions));
+
 app.use(express.json());
 
 // ======================
