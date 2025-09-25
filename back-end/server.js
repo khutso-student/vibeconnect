@@ -20,22 +20,24 @@ const app = express();
 
 // ✅ CORS setup
 const allowedOrigins = [
-  "http://localhost:5173",          // local dev
-  process.env.CLIENT_URL || "",     // production frontend
+  "http://localhost:5173", // local frontend
+  process.env.CLIENT_URL || "", // production frontend
 ].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Postman or server-to-server
+    if (!origin) return callback(null, true); // allow Postman/server-to-server
     if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`❌ CORS blocked: ${origin}`));
   },
-  credentials: true, // allow cookies
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // preflight
+// ✅ FIX: Express 5 no longer supports "*" — must use regex for preflight
+app.options(/.*/, cors(corsOptions));
 
+app.use(express.json());
 
 // ✅ Session setup
 app.use(
@@ -44,7 +46,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // HTTPS only
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
   })
@@ -54,7 +56,6 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ✅ Google OAuth
 passport.use(
   new GoogleStrategy(
     {
@@ -107,7 +108,9 @@ app.get(
   "/api/users/google/callback",
   passport.authenticate("google", { failureRedirect: "/login", session: false }),
   (req, res) => {
-    if (!req.user) return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
+    if (!req.user) {
+      return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
+    }
 
     const token = jwt.sign(
       {
