@@ -15,33 +15,27 @@ const jwt = require("jsonwebtoken");
 
 connectDB();
 
-const app = express();
 
-// ✅ CORS setup (works for local + production)
 const allowedOrigins = [
-  "http://localhost:5173",
-  process.env.CLIENT_URL, // production URL (Vercel frontend)
-].filter(Boolean);
+  process.env.CLIENT_URL,      // frontend URL
+  "http://localhost:5173",          
+].filter(Boolean); 
 
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log("🌍 CORS Request from:", origin);
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
+    if (!origin) return callback(null, true); 
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `❌ CORS blocked: ${origin}`;
+      return callback(new Error(msg), false);
     }
-    console.warn("❌ CORS Blocked:", origin);
-    return callback(new Error("CORS not allowed"), false);
+    return callback(null, true);
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-// ✅ Apply CORS globally
-app.use(cors(corsOptions));
+const app = express();
 
-// ✅ FIX for Express 5: use regex for preflight, not "*"
-app.options(/.*/, cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
@@ -142,7 +136,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// ✅ FIX: Express 5 catch-all route must use /(.*)
+// ✅ Catch-all 404 handler
 app.all(/(.*)/, (req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
