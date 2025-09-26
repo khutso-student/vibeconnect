@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 function EventCarousel({ events = [] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Base URL from environment variable (works in local and production)
-  const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  // Asset base URL for images
+  const ASSET_URL = import.meta.env.VITE_ASSET_URL || "http://localhost:5000";
 
   useEffect(() => {
     if (events.length === 0) return;
@@ -21,24 +21,29 @@ function EventCarousel({ events = [] }) {
 
   const event = events[currentIndex];
 
-  // Handle relative vs absolute image URLs
+  // Construct full image URL using ASSET_URL
   const imageUrl = event.image
     ? event.image.startsWith("http")
       ? event.image
-      : `${BASE_URL}${event.image}`
+      : `${ASSET_URL}${event.image.startsWith("/") ? "" : "/"}${event.image}`
     : "";
 
   return (
     <div className="relative w-full h-48 bg-gray-100 rounded-md overflow-hidden">
-      {imageUrl && (
+      {imageUrl ? (
         <img
+          key={imageUrl}
           src={imageUrl}
-          alt={event.title}
-          className="w-full h-full object-cover transition-transform duration-700"
+          alt={event.title || "Event"}
+          className="w-full h-full object-cover transition-opacity duration-700 opacity-100"
         />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-400">
+          No image
+        </div>
       )}
       <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
-        {event.title}
+        {event.title || "Untitled Event"}
       </div>
     </div>
   );
