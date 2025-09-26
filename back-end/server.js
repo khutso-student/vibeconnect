@@ -1,3 +1,4 @@
+// Load environment variables
 const dotenvFlow = require("dotenv-flow");
 dotenvFlow.config({ node_env: process.env.NODE_ENV || "development" });
 
@@ -13,67 +14,50 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("./models/User");
 const jwt = require("jsonwebtoken");
 
+// Connect to MongoDB
 connectDB();
+
+
+const allowedOrigins = [
+  process.env.CLIENT_URL,      // frontend URL
+  "http://localhost:5173",          
+].filter(Boolean); 
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); 
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `❌ CORS blocked: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+};
 
 const app = express();
 
-// ======================
-// ✅ Allowed origins
-// ======================
-const allowedOrigins = [
-  "http://localhost:5173", // local dev
-  process.env.CLIENT_URL,   // production frontend
-].filter(Boolean);
-
-// ======================
-// ✅ CORS setup
-// ======================
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, mobile apps, server-to-server)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-
-    console.warn("❌ CORS Blocked:", origin);
-    return callback(new Error("CORS not allowed"), false);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-
-// Apply CORS globally
 app.use(cors(corsOptions));
-// Preflight for all routes
-app.options(/(.*)/, cors(corsOptions));
-
 app.use(express.json());
 
-// ======================
-// ✅ Session setup
-// ======================
+// ✅ Session setup (cookie-based auth)
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "keyboard cat",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production", // HTTPS only in prod
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
   })
 );
 
-// ======================
 // ✅ Passport setup
-// ======================
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ======================
-// ✅ Google OAuth setup
-// ======================
+// ✅ Google OAuth
 passport.use(
   new GoogleStrategy(
     {
@@ -111,21 +95,15 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// ======================
-// ✅ Serve uploaded images
-// ======================
+// ✅ Serve uploaded files
 app.use("/uploads", express.static("uploads"));
 
-// ======================
 // ✅ API routes
-// ======================
 app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/uploads", upload);
 
-// ======================
 // ✅ Google OAuth routes
-// ======================
 app.get("/api/users/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 app.get(
@@ -150,9 +128,7 @@ app.get(
   }
 );
 
-// ======================
 // ✅ Health check
-// ======================
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -162,24 +138,18 @@ app.get("/health", (req, res) => {
   });
 });
 
-// ======================
-// ✅ Catch-all 404 route (Express 5 compatible)
-// ======================
-app.all(/(.*)/, (req, res) => {
+// ✅ Catch-all 404 (Express 5 compatible)
+app.all(/.*/, (req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-// ======================
 // ✅ Global error handler
-// ======================
 app.use((err, req, res, next) => {
   console.error("❌ Server Error:", err.stack);
   res.status(500).json({ message: "Something went wrong", error: err.message });
 });
 
-// ======================
-// ✅ Start server
-// ======================
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT} (${process.env.NODE_ENV})`)

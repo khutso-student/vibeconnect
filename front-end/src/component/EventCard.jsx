@@ -107,7 +107,7 @@ export default function EventCard({
       <div className="w-full h-40 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
         {image ? (
           <img
-            src={`${import.meta.env.VITE_API_URL}${image}`}
+             src={`${import.meta.env.VITE_ASSET_URL}${image}`}
             alt={title}
             className="w-full h-full object-cover"
           />
