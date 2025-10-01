@@ -78,13 +78,19 @@ exports.getUserById = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const userId = req.params.id;
+
+    // Only allow self-update OR admin
+    if (req.user.id !== userId && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden: Cannot update this profile" });
+    }
+
     const { name, email, role, profileImage } = req.body;
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { name, email, role, profileImage },
       { new: true, runValidators: true }
-    );
+    ).select("-password");
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
@@ -94,6 +100,7 @@ exports.updateUser = async (req, res) => {
     res.status(500).json({ message: "Failed to update user profile", error: error.message });
   }
 };
+
 
 // --------------------
 // Google OAuth (Passport)

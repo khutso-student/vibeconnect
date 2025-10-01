@@ -5,7 +5,8 @@ const {
   likeEvent,
   updateEvent,
   deleteEvent,
-  incrementViews // ✅ Use the correct function name
+  incrementViews,
+  getLikedEvents // ✅ Use the correct function name
 } = require('../controllers/eventController');
 
 const upload = require('../middleware/uploads');
@@ -19,6 +20,7 @@ const router = express.Router();
 router.get("/", getAllEvents);
 router.patch("/:id/view", incrementViews);// ✅ User must be logged in to view
 router.patch("/:id/like", protect, likeEvent); // ✅ User must be logged in to like
+router.get("/liked", protect, getLikedEvents);
 
 // ============================
 // ADMIN ONLY ROUTES

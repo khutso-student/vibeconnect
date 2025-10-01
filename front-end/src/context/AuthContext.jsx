@@ -5,24 +5,25 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // ✅ new state to prevent redirect too early
+  const [loading, setLoading] = useState(true);
 
+  // Restore user from localStorage on mount
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
-      setUser(JSON.parse(savedUser)); // ✅ restore user from localStorage
+      setUser(JSON.parse(savedUser));
     }
-    setLoading(false); // ✅ only after we finish checking
+    setLoading(false);
   }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(userData));
-    setUser(userData);
+    // ✅ Store token inside user object
+    const userWithToken = { ...userData, token };
+    localStorage.setItem("user", JSON.stringify(userWithToken));
+    setUser(userWithToken);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
   };
