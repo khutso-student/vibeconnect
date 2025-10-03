@@ -16,22 +16,25 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("./models/User");
 const jwt = require("jsonwebtoken");
 
-// ✅ Ensure uploads folder exists
+// ============================
+// ✅ Ensure uploads folder exists (including events)
+// ============================
 const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-  console.log("📂 Created missing uploads folder.");
+const eventsUploadsDir = path.join(uploadsDir, "events");
+if (!fs.existsSync(eventsUploadsDir)) {
+  fs.mkdirSync(eventsUploadsDir, { recursive: true });
+  console.log("📂 Created missing uploads/events folder.");
 }
 
+// ============================
 // ✅ Connect to MongoDB
+// ============================
 connectDB();
 
-// ✅ Allowed origins for CORS
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  "http://localhost:5173",
-].filter(Boolean);
-
+// ============================
+// ✅ CORS
+// ============================
+const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:5173"].filter(Boolean);
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true); // allow Postman or server-to-server
@@ -48,13 +51,16 @@ const corsOptions = {
 
 const app = express();
 
+// ============================
 // ✅ Middleware
+// ============================
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-
+// ============================
 // ✅ Session setup
+// ============================
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "keyboard cat",
@@ -67,11 +73,12 @@ app.use(
   })
 );
 
-// ✅ Passport setup
+// ============================
+// ✅ Passport & Google OAuth
+// ============================
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ✅ Google OAuth
 passport.use(
   new GoogleStrategy(
     {
@@ -109,15 +116,21 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
+// ============================
 // ✅ Serve uploaded files
+// ============================
 app.use("/uploads", express.static(uploadsDir));
 
+// ============================
 // ✅ API routes
+// ============================
 app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/uploads", uploadRoutes);
 
+// ============================
 // ✅ Google OAuth routes
+// ============================
 app.get("/api/users/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 app.get(
@@ -142,7 +155,9 @@ app.get(
   }
 );
 
+// ============================
 // ✅ Health check
+// ============================
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -152,18 +167,24 @@ app.get("/health", (req, res) => {
   });
 });
 
+// ============================
 // ✅ Catch-all 404
+// ============================
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
+// ============================
 // ✅ Global error handler
+// ============================
 app.use((err, req, res, next) => {
   console.error("❌ Server Error:", err.stack);
   res.status(500).json({ message: "Something went wrong", error: err.message });
 });
 
+// ============================
 // ✅ Start server
+// ============================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT} (${process.env.NODE_ENV})`)

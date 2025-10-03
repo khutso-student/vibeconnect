@@ -27,13 +27,22 @@ export default function Events({ events = [], onLikeUpdate, searchTerm }) {
 
   // Filter events based on search
   const filteredEvents = (events || []).filter((event) => {
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm?.toLowerCase() || "";
     return (
-      event.title.toLowerCase().includes(term) ||
-      event.location.toLowerCase().includes(term) ||
+      event.title?.toLowerCase().includes(term) ||
+      event.location?.toLowerCase().includes(term) ||
       new Date(event.date).toLocaleDateString().includes(term)
     );
   });
+
+  // Helper to handle both local and production images
+  const getImageUrl = (imgPath) => {
+    if (!imgPath) return null;
+    // if the path is already a full URL (Cloudinary or external)
+    if (imgPath.startsWith("http") || imgPath.startsWith("https")) return imgPath;
+    // otherwise, assume it's a local upload
+    return `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}${imgPath.startsWith("/") ? "" : "/"}${imgPath}`;
+  };
 
   return (
     <div className="flex flex-col w-full h-full p-2 sm:p-3">
@@ -54,7 +63,7 @@ export default function Events({ events = [], onLikeUpdate, searchTerm }) {
               location={event.location}
               likes={event.likes || 0}
               liked={user ? event.likedBy?.includes(user._id) : false}
-              image={event.image}
+              image={getImageUrl(event.image)}
               createdAt={event.createdAt}
               onLike={() => handleLike(event)}
             />

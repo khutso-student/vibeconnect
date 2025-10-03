@@ -6,25 +6,23 @@ const {
   updateEvent,
   deleteEvent,
   incrementViews,
-  getLikedEvents // ✅ Use the correct function name
-} = require('../controllers/eventController');
+  getLikedEvents,
+} = require("../controllers/eventController");
 
-const upload = require('../middleware/uploads');
-const { protect, authorize } = require('../middleware/auth');
+const upload = require("../middleware/uploads"); // memory-based multer
+const { protect, authorize } = require("../middleware/auth");
 
 const router = express.Router();
 
-// ============================
-// PUBLIC ROUTES
-// ============================
+// Public
 router.get("/", getAllEvents);
-router.patch("/:id/view", incrementViews);// ✅ User must be logged in to view
-router.patch("/:id/like", protect, likeEvent); // ✅ User must be logged in to like
-router.get("/liked", protect, getLikedEvents);
+router.patch("/:id/view", incrementViews);
 
-// ============================
-// ADMIN ONLY ROUTES
-// ============================
+// Protected (users)
+router.get("/liked", protect, getLikedEvents);
+router.patch("/:id/like", protect, likeEvent);
+
+// Admin
 router.post("/", protect, authorize("admin"), upload.single("image"), createEvent);
 router.put("/:id", protect, authorize("admin"), upload.single("image"), updateEvent);
 router.delete("/:id", protect, authorize("admin"), deleteEvent);

@@ -25,7 +25,8 @@ const eventSchema = new mongoose.Schema(
       },
     ],
 
-    image: { type: String, required: true },
+  image: { type: String, required: false },         // Cloudinary URL
+  imagePublicId: { type: String, required: false }, // Cloudinary public_id (for deletion)
 
     // ✅ Track who created the event
     // Make optional to prevent errors on old events

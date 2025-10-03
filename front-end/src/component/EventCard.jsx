@@ -60,7 +60,6 @@ export default function EventCard({
     }
   };
 
-
   const formatLikes = (count) => (count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count);
 
   const getTimeAgo = (dateString) => {
@@ -76,13 +75,24 @@ export default function EventCard({
     return `${seconds}s ago`;
   };
 
+  // ============================
+  // Determine image URL dynamically
+  // ============================
+  const getImageSrc = (img) => {
+    if (!img) return null;
+    // Cloudinary URLs start with http/https
+    if (img.startsWith("http")) return img;
+    // Otherwise, assume local upload
+    return `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}${img.startsWith("/") ? "" : "/"}${img}`;
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-md border border-[#d6d6d6] overflow-hidden hover:scale-105 transform transition-all duration-300 ">
       {/* Image */}
       <div className="w-full h-48 overflow-hidden">
         {image ? (
           <img
-            src={`${import.meta.env.VITE_ASSET_URL}${image}`}
+            src={getImageSrc(image)}
             alt={title}
             className="w-full h-full object-cover"
           />

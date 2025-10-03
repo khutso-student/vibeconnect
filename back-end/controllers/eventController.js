@@ -1,5 +1,8 @@
 const Event = require("../models/Event");
 const User = require("../models/User");
+const cloudinary = require("../config/cloudinary");
+const fs = require("fs");
+const path = require("path");
 
 // Helper function to format "time ago"
 const getTimeAgo = (date) => {
@@ -15,6 +18,29 @@ const getTimeAgo = (date) => {
   return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
 };
 
+// Helper: upload buffer to Cloudinary
+const uploadBufferToCloudinary = (buffer, folder = "events") =>
+  new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    stream.end(buffer);
+  });
+
+// Helper: save locally (dev)
+const saveFileLocally = (file) => {
+  const uploadsDir = path.join(__dirname, "../uploads/events");
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  const fileName = `${Date.now()}-${file.originalname}`;
+  const filePath = path.join(uploadsDir, fileName);
+  fs.writeFileSync(filePath, file.buffer);
+  return `/uploads/events/${fileName}`;
+};
+
 // ============================
 // Create Event (Admin only)
 // ============================
@@ -26,6 +52,17 @@ exports.createEvent = async (req, res) => {
     const { title, date, time, description, location, category, status } = req.body;
     if (!req.file) return res.status(400).json({ message: "Image is required" });
 
+    let imageUrl = "";
+    let imagePublicId = "";
+
+    if (process.env.NODE_ENV === "production") {
+      const uploadResult = await uploadBufferToCloudinary(req.file.buffer, "events");
+      imageUrl = uploadResult.secure_url;
+      imagePublicId = uploadResult.public_id;
+    } else {
+      imageUrl = saveFileLocally(req.file);
+    }
+
     const newEvent = await Event.create({
       title,
       date,
@@ -34,7 +71,8 @@ exports.createEvent = async (req, res) => {
       location,
       category: category || "General",
       status,
-      image: `/uploads/${req.file.filename}`,
+      image: imageUrl,
+      imagePublicId: imagePublicId || undefined,
       createdBy: userId,
     });
 
@@ -74,7 +112,7 @@ exports.getAllEvents = async (req, res) => {
 };
 
 // ============================
-// Increment Event Views (Unique Users)
+// Increment Views
 // ============================
 exports.incrementViews = async (req, res) => {
   try {
@@ -98,7 +136,7 @@ exports.incrementViews = async (req, res) => {
         event.views += 1;
       }
     } else {
-      event.views += 1; // guest view
+      event.views += 1;
     }
 
     await event.save({ validateBeforeSave: false });
@@ -142,7 +180,9 @@ exports.likeEvent = async (req, res) => {
   }
 };
 
-
+// ============================
+// Get Liked Events
+// ============================
 exports.getLikedEvents = async (req, res) => {
   try {
     const likedEvents = await Event.find({ likedBy: { $in: [req.user._id] } });
@@ -153,23 +193,39 @@ exports.getLikedEvents = async (req, res) => {
   }
 };
 
-
-
-
-
 // ============================
-// Update Event (Admin only)
+// Update Event
 // ============================
 exports.updateEvent = async (req, res) => {
   try {
     const { title, date, time, description, location, category, status } = req.body;
-    const updateData = { title, date, time, description, location, category, status };
-    if (req.file) updateData.image = `/uploads/${req.file.filename}`;
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const updatedEvent = await Event.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!updatedEvent) return res.status(404).json({ message: "Event not found" });
+    if (req.file) {
+      if (process.env.NODE_ENV === "production") {
+        if (event.imagePublicId) {
+          try { await cloudinary.uploader.destroy(event.imagePublicId); } catch (e) { console.warn("Cloudinary destroy error:", e.message); }
+        }
+        const uploadResult = await uploadBufferToCloudinary(req.file.buffer, "events");
+        event.image = uploadResult.secure_url;
+        event.imagePublicId = uploadResult.public_id;
+      } else {
+        event.image = saveFileLocally(req.file);
+      }
+    }
 
-    res.json({ success: true, message: "Event updated", event: updatedEvent });
+    // Update other fields
+    event.title = title ?? event.title;
+    event.date = date ?? event.date;
+    event.time = time ?? event.time;
+    event.description = description ?? event.description;
+    event.location = location ?? event.location;
+    event.category = category ?? event.category;
+    event.status = status ?? event.status;
+
+    await event.save();
+    res.json({ success: true, message: "Event updated", event });
   } catch (error) {
     console.error("❌ Update Event Error:", error);
     res.status(500).json({ message: error.message });
@@ -177,13 +233,18 @@ exports.updateEvent = async (req, res) => {
 };
 
 // ============================
-// Delete Event (Admin only)
+// Delete Event
 // ============================
 exports.deleteEvent = async (req, res) => {
   try {
-    const event = await Event.findByIdAndDelete(req.params.id);
+    const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
+    if (process.env.NODE_ENV === "production" && event.imagePublicId) {
+      try { await cloudinary.uploader.destroy(event.imagePublicId); } catch (e) { console.warn("Cloudinary destroy error:", e.message); }
+    }
+
+    await event.deleteOne();
     res.json({ success: true, message: "Event deleted" });
   } catch (error) {
     console.error("❌ Delete Event Error:", error);
