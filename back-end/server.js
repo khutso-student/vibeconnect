@@ -2,6 +2,15 @@
 const dotenvFlow = require("dotenv-flow");
 dotenvFlow.config({ node_env: process.env.NODE_ENV || "development" });
 
+const PORT = process.env.PORT || 5000; // define PORT early
+
+// Base URL for serving images (used in eventController)
+const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://vibeconnect-n570.onrender.com"  // your Render backend URL
+    : `http://localhost:${PORT}`;
+
+
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -185,7 +194,6 @@ app.use((err, req, res, next) => {
 // ============================
 // ✅ Start server
 // ============================
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT} (${process.env.NODE_ENV})`)
 );

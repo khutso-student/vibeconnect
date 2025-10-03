@@ -1,6 +1,4 @@
-import API from "./api"; // your base axios instance
-
-const BASE_URL = import.meta.env.VITE_API_URL ; // automatically picks dev or prod
+import API from "./api"; // Axios instance with baseURL set
 
 // ✅ Create a new event (Admin only)
 export const createEvent = async (eventData, token) => {
@@ -14,7 +12,7 @@ export const createEvent = async (eventData, token) => {
 
     if (!formData.has("category")) formData.append("category", "General");
 
-    const res = await API.post(`${BASE_URL}/events`, formData, {
+    const res = await API.post("/events", formData, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
     });
     return res.data;
@@ -27,7 +25,7 @@ export const createEvent = async (eventData, token) => {
 // ✅ Get all events (Public)
 export const getEvents = async () => {
   try {
-    const res = await API.get(`${BASE_URL}/events`);
+    const res = await API.get("/events");
     return res.data;
   } catch (err) {
     console.error("❌ Error fetching events:", err.response?.data || err.message);
@@ -35,18 +33,14 @@ export const getEvents = async () => {
   }
 };
 
-
-
-// Like/unlike event
+// ✅ Like/unlike event
 export const likeEvent = async (eventId, token) => {
   if (!token) throw new Error("User token is required for liking an event");
 
   try {
-    const res = await API.patch(
-      `${BASE_URL}/events/${eventId}/like`, 
-      {}, 
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const res = await API.patch(`/events/${eventId}/like`, {}, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return res.data;
   } catch (error) {
     console.error("❌ Error liking/unliking event:", error.response?.data || error.message);
@@ -55,17 +49,18 @@ export const likeEvent = async (eventId, token) => {
 };
 
 // ✅ Get liked events for the logged-in user
-// ✅ Get liked events for the logged-in user
 export const getLikedEvents = async (token) => {
-  const config = { headers: { Authorization: `Bearer ${token}` } };
-  const { data } = await API.get(`/events/liked`, config); // ✅ use API, not axios
-  return data;
+  try {
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+    const res = await API.get("/events/liked", config);
+    return res.data;
+  } catch (err) {
+    console.error("❌ Error fetching liked events:", err.response?.data || err.message);
+    throw err;
+  }
 };
 
-
-
-
-// Increment views
+// ✅ Increment views
 export const incrementViews = async (eventId, token = null) => {
   try {
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -77,7 +72,6 @@ export const incrementViews = async (eventId, token = null) => {
   }
 };
 
-
 // ✅ Update event (Admin only)
 export const updateEvent = async (id, eventData, token) => {
   try {
@@ -88,7 +82,7 @@ export const updateEvent = async (id, eventData, token) => {
 
     if (!formData.has("category")) formData.append("category", "General");
 
-    const res = await API.put(`${BASE_URL}/events/${id}`, formData, {
+    const res = await API.put(`/events/${id}`, formData, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
     });
 
@@ -102,7 +96,7 @@ export const updateEvent = async (id, eventData, token) => {
 // ✅ Delete event (Admin only)
 export const deleteEvent = async (id, token) => {
   try {
-    const res = await API.delete(`${BASE_URL}/events/${id}`, {
+    const res = await API.delete(`/events/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return res.data;

@@ -80,10 +80,11 @@ export default function EventCard({
   // ============================
   const getImageSrc = (img) => {
     if (!img) return null;
-    // Cloudinary URLs start with http/https
+    // Cloudinary URLs already have http/https
     if (img.startsWith("http")) return img;
-    // Otherwise, assume local upload
-    return `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}${img.startsWith("/") ? "" : "/"}${img}`;
+    // Local uploads (prepend backend BASE_URL)
+    const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+    return img.startsWith("/") ? `${base}${img}` : `${base}/${img}`;
   };
 
   return (
@@ -107,7 +108,7 @@ export default function EventCard({
       <div className="p-4">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl font-semibold text-purple-800">{title}</h2>
-          {user?.role === "user" && (
+          {user && (
             <div onClick={handleLike} className="cursor-pointer">
               {reacting ? (
                 <MdFavorite className="text-[#F46BF9] text-2xl" />

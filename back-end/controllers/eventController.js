@@ -4,7 +4,18 @@ const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const path = require("path");
 
+// ============================
+// ✅ Base URL for images
+// ============================
+const PORT = process.env.PORT || 5000;
+const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://vibeconnect-n570.onrender.com" // replace with your Render URL
+    : `http://localhost:${PORT}`;
+
+// ============================
 // Helper function to format "time ago"
+// ============================
 const getTimeAgo = (date) => {
   const now = new Date();
   const diffMs = now - date;
@@ -18,20 +29,21 @@ const getTimeAgo = (date) => {
   return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
 };
 
+// ============================
 // Helper: upload buffer to Cloudinary
+// ============================
 const uploadBufferToCloudinary = (buffer, folder = "events") =>
   new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      }
-    );
+    const stream = cloudinary.uploader.upload_stream({ folder }, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
     stream.end(buffer);
   });
 
+// ============================
 // Helper: save locally (dev)
+// ============================
 const saveFileLocally = (file) => {
   const uploadsDir = path.join(__dirname, "../uploads/events");
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -42,12 +54,24 @@ const saveFileLocally = (file) => {
 };
 
 // ============================
+// ✅ Helper: ensure user is authenticated
+// ============================
+const ensureAuthenticated = (req, res) => {
+  const userId = req.user?._id || req.user?.id;
+  if (!userId) {
+    res.status(401).json({ message: "User not authenticated" });
+    return null;
+  }
+  return userId;
+};
+
+// ============================
 // Create Event (Admin only)
 // ============================
 exports.createEvent = async (req, res) => {
   try {
-    const userId = req.user?._id || req.user?.id;
-    if (!userId) return res.status(401).json({ message: "User not authenticated" });
+    const userId = ensureAuthenticated(req, res);
+    if (!userId) return;
 
     const { title, date, time, description, location, category, status } = req.body;
     if (!req.file) return res.status(400).json({ message: "Image is required" });
@@ -60,7 +84,7 @@ exports.createEvent = async (req, res) => {
       imageUrl = uploadResult.secure_url;
       imagePublicId = uploadResult.public_id;
     } else {
-      imageUrl = saveFileLocally(req.file);
+      imageUrl = `${BASE_URL}${saveFileLocally(req.file)}`;
     }
 
     const newEvent = await Event.create({
@@ -97,12 +121,18 @@ exports.getAllEvents = async (req, res) => {
       .populate("likedBy", "name email")
       .sort({ createdAt: -1 });
 
-    const formattedEvents = events.map((event) => ({
-      ...event.toObject(),
-      postedTime: getTimeAgo(event.createdAt),
-      formattedLikes: event.likes >= 1000 ? (event.likes / 1000).toFixed(1) + "k" : event.likes,
-      formattedViews: event.views >= 1000 ? (event.views / 1000).toFixed(1) + "k" : event.views,
-    }));
+    const formattedEvents = events.map((event) => {
+      let imageUrl = event.image || "";
+      if (imageUrl.startsWith("/uploads")) imageUrl = `${BASE_URL}${imageUrl}`;
+
+      return {
+        ...event.toObject(),
+        image: imageUrl,
+        postedTime: getTimeAgo(event.createdAt),
+        formattedLikes: event.likes >= 1000 ? (event.likes / 1000).toFixed(1) + "k" : event.likes,
+        formattedViews: event.views >= 1000 ? (event.views / 1000).toFixed(1) + "k" : event.views,
+      };
+    });
 
     res.json({ success: true, events: formattedEvents });
   } catch (error) {
@@ -116,8 +146,8 @@ exports.getAllEvents = async (req, res) => {
 // ============================
 exports.incrementViews = async (req, res) => {
   try {
+    const userId = req.user?._id || req.user?.id || null;
     const { id } = req.params;
-    const userId = req.user?._id || req.user?.id;
 
     const event = await Event.findById(id);
     if (!event) return res.status(404).json({ success: false, message: "Event not found" });
@@ -140,7 +170,11 @@ exports.incrementViews = async (req, res) => {
     }
 
     await event.save({ validateBeforeSave: false });
-    res.status(200).json({ success: true, views: event.views });
+
+    let imageUrl = event.image || "";
+    if (imageUrl.startsWith("/uploads")) imageUrl = `${BASE_URL}${imageUrl}`;
+
+    res.status(200).json({ success: true, views: event.views, event: { ...event.toObject(), image: imageUrl } });
   } catch (error) {
     console.error("❌ Increment Views Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -152,8 +186,8 @@ exports.incrementViews = async (req, res) => {
 // ============================
 exports.likeEvent = async (req, res) => {
   try {
-    const userId = req.user?._id || req.user?.id;
-    if (!userId) return res.status(401).json({ message: "User not authenticated" });
+    const userId = ensureAuthenticated(req, res);
+    if (!userId) return;
 
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
@@ -170,9 +204,13 @@ exports.likeEvent = async (req, res) => {
     event.likes = event.likedBy.length;
     await event.save();
 
+    let imageUrl = event.image || "";
+    if (imageUrl.startsWith("/uploads")) imageUrl = `${BASE_URL}${imageUrl}`;
+
     res.status(200).json({
       likes: event.likes,
       likedByUser: !hasLiked,
+      event: { ...event.toObject(), image: imageUrl },
     });
   } catch (err) {
     console.error("❌ Error liking event:", err);
@@ -185,8 +223,18 @@ exports.likeEvent = async (req, res) => {
 // ============================
 exports.getLikedEvents = async (req, res) => {
   try {
-    const likedEvents = await Event.find({ likedBy: { $in: [req.user._id] } });
-    res.status(200).json(likedEvents);
+    const userId = ensureAuthenticated(req, res);
+    if (!userId) return;
+
+    const likedEvents = await Event.find({ likedBy: { $in: [userId] } });
+
+    const formattedEvents = likedEvents.map((event) => {
+      let imageUrl = event.image || "";
+      if (imageUrl.startsWith("/uploads")) imageUrl = `${BASE_URL}${imageUrl}`;
+      return { ...event.toObject(), image: imageUrl };
+    });
+
+    res.status(200).json(formattedEvents);
   } catch (err) {
     console.error("❌ Get Liked Events Error:", err);
     res.status(500).json({ message: err.message });
@@ -198,6 +246,9 @@ exports.getLikedEvents = async (req, res) => {
 // ============================
 exports.updateEvent = async (req, res) => {
   try {
+    const userId = ensureAuthenticated(req, res);
+    if (!userId) return;
+
     const { title, date, time, description, location, category, status } = req.body;
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
@@ -205,13 +256,17 @@ exports.updateEvent = async (req, res) => {
     if (req.file) {
       if (process.env.NODE_ENV === "production") {
         if (event.imagePublicId) {
-          try { await cloudinary.uploader.destroy(event.imagePublicId); } catch (e) { console.warn("Cloudinary destroy error:", e.message); }
+          try {
+            await cloudinary.uploader.destroy(event.imagePublicId);
+          } catch (e) {
+            console.warn("Cloudinary destroy error:", e.message);
+          }
         }
         const uploadResult = await uploadBufferToCloudinary(req.file.buffer, "events");
         event.image = uploadResult.secure_url;
         event.imagePublicId = uploadResult.public_id;
       } else {
-        event.image = saveFileLocally(req.file);
+        event.image = `${BASE_URL}${saveFileLocally(req.file)}`;
       }
     }
 
@@ -225,7 +280,11 @@ exports.updateEvent = async (req, res) => {
     event.status = status ?? event.status;
 
     await event.save();
-    res.json({ success: true, message: "Event updated", event });
+
+    let imageUrl = event.image || "";
+    if (imageUrl.startsWith("/uploads")) imageUrl = `${BASE_URL}${imageUrl}`;
+
+    res.json({ success: true, message: "Event updated", event: { ...event.toObject(), image: imageUrl } });
   } catch (error) {
     console.error("❌ Update Event Error:", error);
     res.status(500).json({ message: error.message });
@@ -237,11 +296,18 @@ exports.updateEvent = async (req, res) => {
 // ============================
 exports.deleteEvent = async (req, res) => {
   try {
+    const userId = ensureAuthenticated(req, res);
+    if (!userId) return;
+
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
     if (process.env.NODE_ENV === "production" && event.imagePublicId) {
-      try { await cloudinary.uploader.destroy(event.imagePublicId); } catch (e) { console.warn("Cloudinary destroy error:", e.message); }
+      try {
+        await cloudinary.uploader.destroy(event.imagePublicId);
+      } catch (e) {
+        console.warn("Cloudinary destroy error:", e.message);
+      }
     }
 
     await event.deleteOne();
