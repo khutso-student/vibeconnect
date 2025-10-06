@@ -87,7 +87,7 @@ useEffect(() => {
             <img src={WhiteLogo} alt="Site Logo" className="w-30 sm:w-40" />
           </a>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center w-auto  gap-2 p-2">
             {/* Desktop nav */}
             <div className="hidden sm:flex w-1/2 justify-center">
               <button
@@ -109,7 +109,7 @@ useEffect(() => {
             {user?.role === "admin" && (
               <Link
                 to="/maindashboard"
-                className="hidden sm:flex py-1.5 px-4 border border-[#F46BF9] hover:border-white text-[#F46BF9] hover:text-white text-sm rounded-md duration-300"
+                className="hidden sm:flex py-2 px-4 border border-[#1E1E1E] hover:border-[#F46BF9] text-[#fff] hover:text-[#F46BF9] text-sm rounded-md duration-300"
               >
                 Dashboard
               </Link>

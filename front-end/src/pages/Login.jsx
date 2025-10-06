@@ -45,8 +45,8 @@ export default function Login() {
   };
 
   return (
-    <div className="flex justify-center items-center w-full h-screen bg-[#F6F6F6] px-4">
-      <div className="flex flex-col justify-center py-4 px-5 bg-white w-80 h-100 border border-[#cecece] rounded-md">
+    <div className="flex flex-col justify-center items-center w-full h-screen bg-[#F6F6F6] px-4">
+      <div className="flex flex-col justify-center py-4 px-5 bg-white w-80 h-auto border border-[#cecece] rounded-md">
         <img src={Logo} alt="Web Logo" className="w-40 mb-2" />
         <p className="text-[#344576] text-xl font-semibold mb-2">Login</p>
         <p className="text-sm text-[#A4A2A2] mb-4">
@@ -113,8 +113,16 @@ export default function Login() {
             )}
           </button>
         </form>
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="flex flex-col justify-center items-center w-12 h-12 rounded-full mb-4 border-2 border-white bg-white hover:border-[#F46BF9] text-sm cursor-pointer gap-2 mt-3 hover:animate-spin duration-300"
+          disabled={loading}
+        >
+          <FcGoogle size={20} />
+        </button>
 
-        <div className="flex justify-center items-center mt-2">
+          <div className="flex  items-center mb-4">
           <p className="text-[#A4A2A2] text-sm">Don't have an account?</p>
           <Link
             to="/"
@@ -124,15 +132,13 @@ export default function Login() {
           </Link>
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          className="flex flex-col justify-center items-center w-12 h-12 rounded-full border-2 border-gray-200 bg-white hover:border-[#F46BF9] text-sm cursor-pointer gap-2 mt-3"
-          disabled={loading}
-        >
-          <FcGoogle size={20} />
-        </button>
+        <p className="text-[#A4A2A2] text-sm font-semibold mb-2">Demo Account Admin:</p>
+        <p className="text-[#A4A2A2] text-sm">Khutso@gmail.com - KhutsoAdmin</p>
       </div>
+
+        <p className="text-[#a5a4a4] text-sm mt-5">
+          &copy; {new Date().getFullYear()} QueueCare. All rights reserved.
+        </p>
     </div>
   );
 }

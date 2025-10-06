@@ -1,7 +1,7 @@
 import { useState, useContext } from "react"
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom'; 
-
+import { IoIosLogOut } from "react-icons/io";
 
 
 export default function Profile() {
@@ -17,7 +17,8 @@ export default function Profile() {
 
     return(
         <div onClick={() => setShowModel(!showModel)}
-        className="relative w-10 h-10 bg-gray-300 rounded-full">
+        className="relative w-12 h-10 ml-2 flex justify-center items-center  rounded-full">
+            <IoIosLogOut className="text-2xl text-white hover:text-pink-500 cursor-pointer transition-colors duration-300" />
             {showModel && (
                 <div onClick={() => setShowModel(false)}
                 className="absolute flex flex-col items-center top-12 right-1 bg-[#1E1E1E] w-40 h-auto border border-[#4d4c4c] shadow-sm rounded-md p-2">

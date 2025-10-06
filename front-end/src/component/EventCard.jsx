@@ -108,15 +108,16 @@ export default function EventCard({
       <div className="p-4">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl font-semibold text-purple-800">{title}</h2>
-          {user && (
-            <div onClick={handleLike} className="cursor-pointer">
-              {reacting ? (
-                <MdFavorite className="text-[#F46BF9] text-2xl" />
-              ) : (
-                <MdFavoriteBorder className="text-gray-400 hover:text-[#F46BF9] text-2xl" />
-              )}
-            </div>
-          )}
+            {user?.role === "user" && (
+              <div onClick={handleLike} className="cursor-pointer">
+                {reacting ? (
+                  <MdFavorite className="text-[#F46BF9] text-2xl" />
+                ) : (
+                  <MdFavoriteBorder className="text-gray-400 hover:text-[#F46BF9] text-2xl" />
+                )}
+              </div>
+            )}
+
         </div>
 
         <div className="flex gap-2 mb-2">
