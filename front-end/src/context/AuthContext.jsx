@@ -7,7 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore user from localStorage on mount
+  // ✅ Restore user from localStorage on mount
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
@@ -17,8 +17,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData, token) => {
-    // ✅ Store token inside user object
-    const userWithToken = { ...userData, token };
+    // ✅ Safely store all important user info including email + role
+    const userWithToken = {
+      id: userData.id,
+      name: userData.name,
+      email: userData.email, // ensure email is saved
+      role: userData.role,   // ensure role is saved
+      token,
+    };
+
     localStorage.setItem("user", JSON.stringify(userWithToken));
     setUser(userWithToken);
   };

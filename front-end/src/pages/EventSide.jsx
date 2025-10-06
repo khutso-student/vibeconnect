@@ -11,6 +11,7 @@ export default function EventSide() {
   const [loading, setLoading] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({
     title: "",
@@ -60,6 +61,7 @@ export default function EventSide() {
     e.preventDefault();
     if (!user || user.role !== "admin") return alert("Only admins can add events.");
     if (!formData.image && !editingEvent?.image) return alert("Please upload an image before submitting.");
+    setIsSubmitting(true);
 
     try {
       console.log("Submitting Event:", formData);
@@ -90,6 +92,8 @@ export default function EventSide() {
     } catch (err) {
       console.error("Failed to submit event:", err);
       alert(err.response?.data?.message || "Failed to submit event");
+    }  finally {
+    setIsSubmitting(false);
     }
   };
 
@@ -171,7 +175,9 @@ export default function EventSide() {
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : filteredEvents.length === 0 ? (
-        <p>No events found</p>
+        <div className="flex justify-center items-center w-full h-full py-10">
+        <p className="text-gray-400 text-lg">No  Events Found.</p>
+      </div>
       ) : (
         <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 ">
           {filteredEvents.map((event) => (
@@ -274,12 +280,44 @@ export default function EventSide() {
                 className="p-2 border rounded-md"
                 {...(!editingEvent && { required: true })}
               />
-              <button
-                type="submit"
-                className="bg-[#F46BF9] text-white p-2 rounded-md hover:bg-[#344576] duration-300"
-              >
-                {editingEvent ? "Update Event" : "Add Event"}
-              </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`flex items-center cursor-pointer justify-center gap-2 bg-[#F46BF9] text-white p-2 rounded-md 
+                    ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-[#344576]"} 
+                    duration-300 transition-all`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        ></path>
+                      </svg>
+                      <span>
+                        {editingEvent ? "Updating Event..." : "Creating Event..."}
+                      </span>
+                    </>
+                  ) : (
+                    <span>{editingEvent ? "Update Event" : "Add Event"}</span>
+                  )}
+                </button>
+
             </form>
           </div>
         </div>

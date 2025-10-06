@@ -3,8 +3,7 @@ const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const passport = require("passport");
 
-// --------------------
-// Normal Signup
+
 exports.signup = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -15,15 +14,17 @@ exports.signup = async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashed });
 
+    // ✅ Include name + email + role in JWT
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, name: user.name, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "7d" }
     );
 
+    // ✅ Include email in response
     res.status(201).json({
       token,
-      user: { id: user._id, name: user.name, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error) {
     console.error("Signup Error:", error.message);
@@ -43,21 +44,52 @@ exports.login = async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Incorrect password" });
 
+    // ✅ Include name + email + role in JWT
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, name: user.name, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "7d" }
     );
 
+    // ✅ Include email in response
     res.status(200).json({
       token,
-      user: { id: user._id, name: user.name, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error) {
     console.error("Login Error:", error.message);
     res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 };
+
+// --------------------
+// Google OAuth (Passport)
+exports.googleAuth = passport.authenticate("google", { scope: ["profile", "email"] });
+
+// --------------------
+// Google OAuth Callback
+exports.googleCallback = (req, res, next) => {
+  passport.authenticate("google", { failureRedirect: "/login" })(req, res, async () => {
+    try {
+      const user = req.user;
+      if (!user) return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
+
+      // ✅ Include name + email in token
+      const token = jwt.sign(
+        { id: user._id, name: user.name, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      // Redirect with token
+      res.redirect(`${process.env.CLIENT_URL}/google-redirect?token=${token}`);
+    } catch (error) {
+      console.error("Google callback error:", error.message);
+      res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
+    }
+  });
+};
+
 
 // --------------------
 // Get User by ID
@@ -72,6 +104,7 @@ exports.getUserById = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch user", error: error.message });
   }
 };
+
 
 // --------------------
 // Update User
@@ -99,27 +132,4 @@ exports.updateUser = async (req, res) => {
     console.error("Update Error:", error.message);
     res.status(500).json({ message: "Failed to update user profile", error: error.message });
   }
-};
-
-
-// --------------------
-// Google OAuth (Passport)
-exports.googleAuth = passport.authenticate("google", { scope: ["profile", "email"] });
-
-exports.googleCallback = (req, res, next) => {
-  passport.authenticate("google", { failureRedirect: "/login" })(req, res, async () => {
-    try {
-      const user = req.user;
-      if (!user) return res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
-
-      const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-        expiresIn: "7d",
-      });
-
-      res.redirect(`${process.env.CLIENT_URL}/google-redirect?token=${token}`);
-    } catch (error) {
-      console.error("Google callback error:", error.message);
-      res.redirect(`${process.env.CLIENT_URL}/login?error=GoogleAuthFailed`);
-    }
-  });
 };

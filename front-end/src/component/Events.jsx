@@ -49,7 +49,9 @@ export default function Events({ events = [], onLikeUpdate, searchTerm }) {
       <h1 className="text-[#1E1E1E] font-semibold mb-4">All Events</h1>
 
       {filteredEvents.length === 0 ? (
-        <p className="text-center">No available events</p>
+        <div className="flex justify-center items-center w-full h-full py-10">
+        <p className="text-gray-400 text-lg">No available Events.</p>
+      </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-1 sm:p-2">
           {filteredEvents.map((event) => (

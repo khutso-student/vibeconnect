@@ -118,7 +118,9 @@ export default function OverView() {
       {loading ? (
         <p className="text-center text-gray-500">Loading events...</p>
       ) : filteredEvents.length === 0 ? (
-        <p className="text-center text-gray-500">No events found</p>
+      <div className="flex justify-center items-center w-full h-full py-10">
+        <p className="text-gray-400 text-lg">No  Events Found.</p>
+      </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredEvents.map((event) => (
